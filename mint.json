@@ -6,33 +6,33 @@
     "light": "#07C983",
     "dark": "#0A7D5A"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/docs/favicon.svg",
   "navigation": [
     {
       "group": "Overview",
-      "pages": ["introduction"]
+      "pages": ["docs/introduction"]
     },
     {
       "group": "Architecture",
       "pages": [
-        "architecture/overview",
-        "architecture/payload"
+        "docs/architecture/overview",
+        "docs/architecture/payload"
       ]
     },
     {
       "group": "Cross-Chain Flows",
       "pages": [
-        "flows/eth-to-solana",
-        "flows/solana-to-eth",
-        "flows/eth-to-ton",
-        "flows/ton-to-eth"
+        "docs/flows/eth-to-solana",
+        "docs/flows/solana-to-eth",
+        "docs/flows/eth-to-ton",
+        "docs/flows/ton-to-eth"
       ]
     },
     {
       "group": "Operations",
       "pages": [
-        "operations/failure-recovery",
-        "operations/security"
+        "docs/operations/failure-recovery",
+        "docs/operations/security"
       ]
     }
   ]
