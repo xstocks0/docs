@@ -1,0 +1,42 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "theme": "mint",
+  "name": "xStocks0",
+  "colors": {
+    "primary": "#0D9373",
+    "light": "#07C983",
+    "dark": "#0A7D5A"
+  },
+  "favicon": "/docs/favicon.svg",
+  "navigation": {
+    "groups": [
+      {
+        "group": "Overview",
+        "pages": ["docs/introduction"]
+      },
+      {
+        "group": "Architecture",
+        "pages": [
+          "docs/architecture/overview",
+          "docs/architecture/payload"
+        ]
+      },
+      {
+        "group": "Cross-Chain Flows",
+        "pages": [
+          "docs/flows/eth-to-solana",
+          "docs/flows/solana-to-eth",
+          "docs/flows/eth-to-ton",
+          "docs/flows/ton-to-eth"
+        ]
+      },
+      {
+        "group": "Operations",
+        "pages": [
+          "docs/operations/failure-recovery",
+          "docs/operations/security"
+        ]
+      }
+    ]
+  }
+}
