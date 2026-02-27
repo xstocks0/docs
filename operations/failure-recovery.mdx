@@ -1,0 +1,70 @@
+---
+title: "Failure Recovery"
+description: "How to handle message delivery failures, execution errors, and supply discrepancies"
+---
+
+## Scenario A: Message Delivered but Execution Fails
+
+LayerZero V2 supports **message retry** via `endpoint.retryMessage()`. On Ethereum, the adapter exposes an admin-gated hook:
+
+```solidity
+function retryReceive(
+    Origin calldata origin,
+    bytes32 guid,
+    bytes calldata message
+) external onlyRole(ADMIN_ROLE) {
+    lzReceive(origin, guid, message, address(0), "");
+}
+```
+
+On Solana, the LZ executor retries the transaction automatically until it succeeds or the nonce window closes.
+
+## Scenario B: Message Never Delivered (Executor Failure)
+
+Users can re-trigger delivery by calling `endpoint.retryMessage()` on the source chain with:
+
+- The original `guid` — emitted in `TokensLocked` / `BurnEvent`
+- The original `options` bytes
+
+<Tip>
+  Save the `guid` and `options` from your send transaction receipt. They are required to manually retry a stuck message.
+</Tip>
+
+## Scenario C: Emergency Pause and Recovery
+
+<Steps>
+  <Step title="Pause">
+    Admin calls `pause()` on both the adapter and the token contract. No new messages are processed.
+  </Step>
+  <Step title="Investigate">
+    Compare `_totalLocked` (Ethereum) against `Σ total_minted` across remote chains. Identify the discrepancy.
+  </Step>
+  <Step title="Remediate (if needed)">
+    If `totalLocked` exceeds the actual token balance, call `emergencyWithdraw()` (gated by `whenPaused + ADMIN_ROLE`) to move tokens to the treasury.
+  </Step>
+  <Step title="Unpause">
+    Once the invariant is restored, call `unpause()` to resume normal operations.
+  </Step>
+</Steps>
+
+## Scenario D: Nonce Gap (Out-of-Order Delivery)
+
+| Chain | Behavior |
+|---|---|
+| Ethereum | Nonces are **not ordered** — each `(srcEid, nonce)` is tracked independently via `_usedNonces`. Parallel delivery is allowed. |
+| Solana | Nonces are **strictly ordered** (`inbound_nonce + 1`). Out-of-order messages are rejected and must be redelivered in sequence. |
+| TON | Same strict ordering as Solana. |
+
+<Note>
+  This is a deliberate tradeoff: Ethereum prioritizes throughput with parallel delivery, while Solana and TON enforce ordering for simpler state management.
+</Note>
+
+## Retry Schedule
+
+The LZ executor uses exponential backoff before escalating to manual intervention:
+
+```
+retry_interval = [30s, 2m, 10m, 1h, 6h, 24h]
+max_retries    = 10
+after_max      = alert + manual intervention via retryMessage()
+```

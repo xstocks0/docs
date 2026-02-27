@@ -1,0 +1,45 @@
+---
+title: "Ethereum → TON"
+description: "Lock tokens on Ethereum, mint Jettons on TON"
+---
+
+## Flow Diagram
+
+```
+User (ETH)              OFTAdapter (ETH)        LZ Endpoint        Jetton Master (TON)
+    │                          │                      │                      │
+    │── send(dstEid=30277) ────►│                      │                      │
+    │                          │ lock tokens           │                      │
+    │                          │── endpoint.send() ───►│                      │
+    │                          │                      │── lz_receive msg ────►│
+    │                          │                      │                      │
+    │                          │                      │  verify lz_oracle()   │
+    │                          │                      │  check nonce+1        │
+    │                          │                      │  mint_jettons(to)     │
+    │                          │                      │  total_supply += amt  │
+    │◄─ emit TokensLocked ─────│                      │                      │
+```
+
+## Step-by-Step
+
+<Steps>
+  <Step title="Encode the TON recipient">
+    TON uses 256-bit address hashes. The EVM caller encodes the recipient as:
+
+    ```
+    recipient_bytes32 = bytes32(uint256(sha256(TON_address_raw_bytes)))
+    ```
+
+    The TON Jetton Master reconstructs the full address from this hash on receipt.
+  </Step>
+  <Step title="Lock and send">
+    Call `send` with `dstEid=30277`. The adapter locks the tokens and dispatches the LZ message to TON.
+  </Step>
+  <Step title="Delivery on TON">
+    The LZ oracle delivers the message to the Jetton Master. It verifies the oracle, checks the nonce is `expected_nonce + 1`, then mints Jettons to the recipient and increments `total_supply`.
+  </Step>
+</Steps>
+
+<Note>
+  TON and Solana both enforce **strict nonce ordering** (`inbound_nonce + 1`). Out-of-order messages are rejected and must be redelivered in the correct sequence.
+</Note>

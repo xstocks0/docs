@@ -1,0 +1,61 @@
+---
+title: "Security Properties"
+description: "Security mechanisms and invariants enforced by xStocks0"
+---
+
+## Security Model
+
+| Property | Mechanism |
+|---|---|
+| **Replay protection** | `(srcEid, nonce)` replay map on Ethereum; `NonceRecord` PDA on Solana; monotonic nonce on TON |
+| **Peer authentication** | `peers[srcEid]` whitelist checked before decoding any payload |
+| **Supply invariant** | `_totalLocked` on Ethereum; `total_minted` on Solana/TON — must always be equal |
+| **Dust elimination** | Shared-decimal truncation applied before lock/burn; remainder refunded to sender |
+| **Emergency egress** | `emergencyWithdraw` gated by `whenPaused + ADMIN_ROLE` |
+| **Transfer compliance** | `_restricted` address map enforced in xStock ERC-20 `_update` hook |
+| **Upgrade path** | Admin can deploy a new adapter and migrate `totalLocked` to it |
+
+## Peer Authentication
+
+Before decoding any inbound payload, every chain verifies the message originated from a registered peer:
+
+```solidity
+// Ethereum — OFTAdapter
+function _lzReceive(...) internal override {
+    require(peers[origin.srcEid] == origin.sender, "unknown peer");
+    // decode and process
+}
+```
+
+```rust
+// Solana — xstock0 program
+fn verify_peer(ctx: &Context<LzReceive>, src_eid: u16, sender: [u8; 32]) -> Result<()> {
+    let peer = ctx.accounts.lz_peer.address;
+    require!(peer == sender, XStockError::InvalidPeer);
+    Ok(())
+}
+```
+
+## Compliance Controls (Ethereum)
+
+The `xStock` ERC-20 overrides `_update` to block transfers involving restricted addresses:
+
+```solidity
+function _update(address from, address to, uint256 amount) internal override {
+    require(!_restricted[from] && !_restricted[to], "address restricted");
+    super._update(from, to, amount);
+}
+```
+
+The `COMPLIANCE` role can restrict or unrestrict addresses at any time, including while the token is live.
+
+## Known Limitations and TODOs
+
+<Warning>
+  The following items should be addressed before a production deployment.
+</Warning>
+
+- **Solana**: Integrate the official LZ Solana endpoint CPI. Currently uses an emitted event for off-chain relay.
+- **Solana**: Add a dedicated outbound nonce counter. Currently uses `total_minted` as a placeholder.
+- **TON**: Add `token_id` to storage and implement dust refund logic.
+- **Ethereum tests**: Add a `MockLZEndpoint` contract and wire Hardhat fork tests against LZ V2 testnet.

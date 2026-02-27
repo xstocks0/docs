@@ -1,0 +1,70 @@
+---
+title: "Ethereum → Solana"
+description: "Lock tokens on Ethereum, mint SPL tokens on Solana"
+---
+
+## Flow Diagram
+
+```
+User (ETH)              OFTAdapter (ETH)        LZ Endpoint       xstock0 Program (SOL)
+    │                          │                      │                      │
+    │── approve(adapter, amt) ─►│                      │                      │
+    │                          │                      │                      │
+    │── send(dstEid=30168) ────►│                      │                      │
+    │                          │                      │                      │
+    │                          │ transferFrom(user)    │                      │
+    │                          │ _totalLocked += amt   │                      │
+    │                          │                      │                      │
+    │                          │── endpoint.send() ───►│                      │
+    │                          │   {payload, options}  │                      │
+    │                          │                      │── deliver message ───►│
+    │◄─ emit TokensLocked ─────│                      │                      │
+    │                          │                      │   verify_peer()       │
+    │                          │                      │   check_nonce()       │
+    │                          │                      │   decode_payload()    │
+    │                          │                      │   mint_to(recipient)  │
+    │                          │                      │   emit MintEvent      │
+```
+
+## Events
+
+| Chain | Event |
+|---|---|
+| Ethereum | `TokensLocked(sender, dstEid=30168, recipient, amount, nonce)` |
+| Solana | `MintEvent(token_id, src_eid=30101, nonce, recipient, amount_sd, amount_spl)` |
+
+## Step-by-Step
+
+<Steps>
+  <Step title="Approve the adapter">
+    The user approves `xStockOFTAdapter` to spend the desired amount of xStock tokens.
+
+    ```solidity
+    xStock.approve(address(adapter), amount);
+    ```
+  </Step>
+  <Step title="Quote the fee">
+    Call `quoteSend` to get the native fee required by the LZ executor on Solana.
+
+    ```solidity
+    MessagingFee memory fee = adapter.quoteSend(30168, amount, options);
+    ```
+  </Step>
+  <Step title="Send">
+    Call `send` with `msg.value >= nativeFee`. The adapter locks tokens and dispatches the LZ message.
+
+    ```solidity
+    adapter.send{value: fee.nativeFee}(30168, amount, recipient, options, refundAddress);
+    ```
+  </Step>
+  <Step title="Delivery on Solana">
+    The LZ executor calls `lz_receive` on the Solana program. It verifies the peer, checks the nonce, and mints SPL tokens to the recipient.
+  </Step>
+</Steps>
+
+## Fee Handling
+
+1. User calls `quoteSend(30168, amount, options)` to get `nativeFee`.
+2. `send()` is called with `msg.value >= nativeFee`.
+3. LZ executor on Solana is paid from the native fee pool.
+4. Excess ETH is refunded to `refundAddress`.

@@ -1,0 +1,43 @@
+---
+title: "TON → Ethereum"
+description: "Burn Jettons on TON, unlock ERC-20 tokens on Ethereum"
+---
+
+## Flow Diagram
+
+```
+User (TON)    Jetton Wallet (TON)   Jetton Master (TON)   LZ Oracle (TON)   OFTAdapter (ETH)
+    │                │                     │                    │                   │
+    │── burn(amt,    │                     │                    │                   │
+    │   recip_evm) ─►│                     │                    │                   │
+    │                │ balance -= amt       │                    │                   │
+    │                │── burn_notification ─►│                    │                   │
+    │                │   (amount,           │                    │                   │
+    │                │    from_addr,        │                    │                   │
+    │                │    recipient_evm)    │                    │                   │
+    │                │                     │ total_supply -= amt │                   │
+    │                │                     │── lz_send_notify ──►│                   │
+    │                │                     │   {payload}         │── relay msg ──────►│
+    │                │                     │                    │                   │
+    │                │                     │                    │  verify peer       │
+    │                │                     │                    │  check nonce       │
+    │                │                     │                    │  unlock tokens     │
+    │                │                     │                    │  emit TokensUnlocked│
+```
+
+## Step-by-Step
+
+<Steps>
+  <Step title="Burn Jettons">
+    The user sends a `burn` message to their Jetton Wallet with the desired amount and the EVM recipient address encoded in the custom payload.
+  </Step>
+  <Step title="Burn notification">
+    The Jetton Wallet deducts the balance and sends a `burn_notification` to the Jetton Master containing the amount, sender address, and EVM recipient.
+  </Step>
+  <Step title="Emit LZ message">
+    The Jetton Master decrements `total_supply` and calls `lz_send_notify` to the LZ Oracle, which packages the 82-byte payload and relays it to Ethereum.
+  </Step>
+  <Step title="Unlock on Ethereum">
+    The LZ executor delivers the message to `xStockOFTAdapter.lzReceive()`. The adapter verifies the TON peer, checks the nonce, and calls `token.transfer(recipient_evm, amount)`.
+  </Step>
+</Steps>

@@ -1,0 +1,62 @@
+---
+title: "Introduction"
+description: "Omnichain tokenized equities infrastructure built on LayerZero V2"
+---
+
+xStocks0 is an omnichain tokenized equities protocol — the USDT0 model applied to stocks. It enables a single equity token (e.g. xAAPL, xTSLA) to exist natively across Ethereum, Solana, and TON without wrapped representations or custodial bridges.
+
+## How It Works
+
+xStocks0 uses a **lock/mint model** powered by LayerZero V2 messaging:
+
+- **Ethereum** is the canonical chain. The `xStockOFTAdapter` holds a lock vault — tokens transferred out are locked here, not burned.
+- **Remote chains** (Solana, TON) mint tokens when a cross-chain message is received, and burn them when sending back.
+
+This preserves a strict supply invariant: the total locked on Ethereum always equals the total minted across all remote chains.
+
+## Supported Chains
+
+<CardGroup cols={3}>
+  <Card title="Ethereum" icon="ethereum">
+    Canonical chain. Lock vault. ERC-20 with compliance controls.
+
+    **Endpoint ID:** `30101`
+  </Card>
+  <Card title="Solana" icon="circle">
+    Anchor program. SPL token. Strict nonce ordering.
+
+    **Endpoint ID:** `30168`
+  </Card>
+  <Card title="TON" icon="circle">
+    FunC Jetton (TEP-74). LZ-gated mint. Strict nonce ordering.
+
+    **Endpoint ID:** `30277`
+  </Card>
+</CardGroup>
+
+## Key Properties
+
+| Property | Detail |
+|---|---|
+| Messaging | LayerZero V2 |
+| Payload | 82 bytes, big-endian |
+| Shared decimals | 8 |
+| Replay protection | `(srcEid, nonce)` mapping / NonceRecord PDA |
+| Emergency controls | Pause + `emergencyWithdraw` on Ethereum |
+
+## Explore the Docs
+
+<CardGroup cols={2}>
+  <Card title="Architecture" icon="sitemap" href="/docs/architecture/overview">
+    Endpoint IDs, decimal conventions, and the supply invariant
+  </Card>
+  <Card title="Payload Format" icon="code" href="/docs/architecture/payload">
+    The 82-byte OFT payload structure and encoding rules
+  </Card>
+  <Card title="Cross-Chain Flows" icon="arrows-turn-right" href="/docs/flows/eth-to-solana">
+    Step-by-step message flows for all four route directions
+  </Card>
+  <Card title="Failure Recovery" icon="rotate" href="/docs/operations/failure-recovery">
+    Retry logic, emergency pause, and nonce gap handling
+  </Card>
+</CardGroup>

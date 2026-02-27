@@ -1,0 +1,54 @@
+---
+title: "Solana → Ethereum"
+description: "Burn SPL tokens on Solana, unlock ERC-20 tokens on Ethereum"
+---
+
+## Flow Diagram
+
+```
+User (SOL)           xstock0 Program (SOL)     LZ Endpoint        OFTAdapter (ETH)
+    │                        │                      │                      │
+    │── send(dst=30101) ────►│                      │                      │
+    │                        │                      │                      │
+    │                        │ burn(user_ata, amt)   │                      │
+    │                        │ total_minted -= amt   │                      │
+    │                        │                      │                      │
+    │                        │── emit BurnEvent ────►│  (relayer picks up)  │
+    │◄─ BurnEvent emitted ───│                      │                      │
+    │                        │                      │── deliver message ───►│
+    │                        │                      │                      │
+    │                        │                      │   verify_peer()       │
+    │                        │                      │   check_nonce()       │
+    │                        │                      │   _totalLocked -= amt │
+    │                        │                      │   token.transfer(to)  │
+    │                        │                      │   emit TokensUnlocked │
+```
+
+## Events
+
+| Chain | Event |
+|---|---|
+| Solana | `BurnEvent(token_id, dst_eid=30101, sender, recipient_evm, amount_sd, payload)` |
+| Ethereum | `TokensUnlocked(srcGuid, srcEid=30168, recipient, amount, nonce)` |
+
+## Step-by-Step
+
+<Steps>
+  <Step title="Initiate send on Solana">
+    The user calls the `send` instruction with destination EID `30101` and the EVM recipient address (encoded as `bytes32`).
+  </Step>
+  <Step title="Burn and emit">
+    The program burns tokens from the user's ATA, decrements `total_minted`, and emits a `BurnEvent`. An off-chain relayer monitors this event.
+  </Step>
+  <Step title="Relay to Ethereum">
+    The LZ executor delivers the message to `xStockOFTAdapter.lzReceive()` on Ethereum.
+  </Step>
+  <Step title="Unlock on Ethereum">
+    The adapter verifies the Solana peer, checks the nonce, decrements `_totalLocked`, and calls `token.transfer(recipient, amount)`.
+  </Step>
+</Steps>
+
+## Fee Handling
+
+1. User pays SOL for the LZ executor fee (quoted from the LZ SDK before sending).
+2. The executor on Ethereum calls `lzReceive()` — **no additional ETH is required from the user**.

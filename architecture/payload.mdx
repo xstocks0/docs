@@ -1,0 +1,79 @@
+---
+title: "Payload Format"
+description: "The 82-byte OFT message payload used across all chains"
+---
+
+Every cross-chain message carries a fixed 82-byte big-endian payload. All chains encode and decode this same structure.
+
+## Layout
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│  OFT Payload  (82 bytes, big-endian)                         │
+├──────────┬──────────┬──────────┬──────────────┬─────────────┤
+│ token_id │amount_sd │ recipient│  src_eid     │   nonce     │
+│  bytes32 │  uint64  │  bytes32 │   uint16     │   uint64    │
+│  32 bytes│  8 bytes │  32 bytes│  2 bytes     │  8 bytes    │
+└──────────┴──────────┴──────────┴──────────────┴─────────────┘
+```
+
+## Field Reference
+
+<ResponseField name="token_id" type="bytes32">
+  `keccak256(symbol)` or the registry contract address cast to `bytes32`. Identifies which equity token is being transferred.
+</ResponseField>
+
+<ResponseField name="amount_sd" type="uint64 (8 bytes)">
+  Transfer amount expressed in **shared decimals (8)**. Convert from local decimals before encoding.
+</ResponseField>
+
+<ResponseField name="recipient" type="bytes32">
+  Destination address encoded as 32 bytes:
+  - **EVM** — left-padded 20-byte address (`address` → `bytes32`)
+  - **Solana** — 32-byte public key
+  - **TON** — 256-bit address hash (`sha256(raw_address_bytes)`)
+</ResponseField>
+
+<ResponseField name="src_eid" type="uint16 (2 bytes)">
+  LayerZero source endpoint ID of the originating chain. Used by the destination to look up the trusted peer.
+
+  | Value | Chain |
+  |---|---|
+  | `30101` | Ethereum |
+  | `30168` | Solana |
+  | `30277` | TON |
+</ResponseField>
+
+<ResponseField name="nonce" type="uint64 (8 bytes)">
+  Monotonically increasing counter per source chain. Used for replay protection and ordering guarantees.
+</ResponseField>
+
+## Encoding Reference
+
+### Solana (`lz.rs`)
+
+```rust
+pub fn encode(msg: &OFTMessage) -> [u8; 82] {
+    let mut buf = [0u8; 82];
+    buf[0..32].copy_from_slice(&msg.token_id);
+    buf[32..40].copy_from_slice(&msg.amount_sd.to_be_bytes());
+    buf[40..72].copy_from_slice(&msg.recipient);
+    buf[72..74].copy_from_slice(&msg.src_eid.to_be_bytes());
+    buf[74..82].copy_from_slice(&msg.nonce.to_be_bytes());
+    buf
+}
+```
+
+### Ethereum (`OFTMsgCodec.sol`)
+
+```solidity
+function encode(
+    bytes32 tokenId,
+    uint64  amountSD,
+    bytes32 recipient,
+    uint16  srcEid,
+    uint64  nonce
+) internal pure returns (bytes memory) {
+    return abi.encodePacked(tokenId, amountSD, recipient, srcEid, nonce);
+}
+```

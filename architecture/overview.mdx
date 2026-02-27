@@ -1,0 +1,66 @@
+---
+title: "Architecture Overview"
+description: "Chain endpoints, decimal conventions, and the supply invariant"
+---
+
+## Chain Endpoint IDs (LayerZero V2)
+
+| Chain | Endpoint ID |
+|---|---|
+| Ethereum | `30101` |
+| Solana | `30168` |
+| TON | `30277` |
+
+## Decimal Conventions
+
+Each chain stores token amounts in its own local decimals. Cross-chain transfers use **shared decimals (8)** as the common unit.
+
+| Chain | Local Decimals | Conversion to Shared (8 dec) |
+|---|---|---|
+| Ethereum | 18 | ÷ 10^10 |
+| Solana | 9 | ÷ 10^1 |
+| TON | 9 | ÷ 10^1 |
+
+<Note>
+  Dust (the remainder after truncation to shared decimals) is returned to the sender on the source chain before the cross-chain message is sent.
+</Note>
+
+## Supply Invariant
+
+At all times the following must hold:
+
+```
+canonical_supply_on_eth
+  == locked_in_OFTAdapter
+  >= Σ minted_on_all_remote_chains
+
+locked_in_OFTAdapter
+  == xStock0_minted_on_Solana
+   + xStock0_minted_on_TON
+   + xStock0_minted_on_[other_chains]
+```
+
+The invariant is enforced by:
+
+- **Ethereum** — `_totalLocked` counter increments on lock, decrements on unlock.
+- **Solana** — `total_minted` counter increments on mint, decrements on burn.
+- **TON** — `total_supply` counter increments on mint, decrements on burn.
+
+<Warning>
+  Any discrepancy between `_totalLocked` and `Σ total_minted` indicates a bridging failure. Use the emergency pause + recovery flow to investigate before resuming operations.
+</Warning>
+
+## Role Model
+
+### Ethereum (AccessControl)
+
+| Role | Capability |
+|---|---|
+| `DEFAULT_ADMIN` | Grant / revoke all roles, upgrade adapter |
+| `ISSUER` | Mint new xStock tokens |
+| `COMPLIANCE` | Restrict / unrestrict addresses |
+| `PAUSER` | Pause token and adapter |
+
+### Solana & TON
+
+Controlled by a single **admin key**. No role separation — keep the admin key in a hardware wallet or multisig.
