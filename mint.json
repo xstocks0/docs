@@ -10,29 +10,29 @@
   "navigation": [
     {
       "group": "Overview",
-      "pages": ["docs/introduction"]
+      "pages": ["introduction"]
     },
     {
       "group": "Architecture",
       "pages": [
-        "docs/architecture/overview",
-        "docs/architecture/payload"
+        "architecture/overview",
+        "architecture/payload"
       ]
     },
     {
       "group": "Cross-Chain Flows",
       "pages": [
-        "docs/flows/eth-to-solana",
-        "docs/flows/solana-to-eth",
-        "docs/flows/eth-to-ton",
-        "docs/flows/ton-to-eth"
+        "flows/eth-to-solana",
+        "flows/solana-to-eth",
+        "flows/eth-to-ton",
+        "flows/ton-to-eth"
       ]
     },
     {
       "group": "Operations",
       "pages": [
-        "docs/operations/failure-recovery",
-        "docs/operations/security"
+        "operations/failure-recovery",
+        "operations/security"
       ]
     }
   ]
