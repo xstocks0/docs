@@ -9,8 +9,8 @@ xStocks0 is an omnichain tokenized equities protocol — the USDT0 model applied
 
 xStocks0 uses a **lock/mint model** powered by LayerZero V2 messaging:
 
-- **Ethereum** is the canonical chain. The `xStockOFTAdapter` holds a lock vault — tokens transferred out are locked here, not burned.
-- **Remote chains** (Solana, TON) mint tokens when a cross-chain message is received, and burn them when sending back.
+- **Ethereum** is the canonical chain. The `xStockOFTAdapter` holds a lock vault — tokens transferred out are locked here, not burned
+- **Remote chains** (Solana, TON) mint tokens when a cross-chain message is received, and burn them when sending back
 
 This preserves a strict supply invariant: the total locked on Ethereum always equals the total minted across all remote chains.
 
